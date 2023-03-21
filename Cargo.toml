@@ -1,0 +1,21 @@
+[package]
+name = "system-hook"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "shook"
+path = "src/main.rs"
+
+[dependencies]
+argh = "0.1.10"
+axum = { version = "0.6.11", features = ["macros"] }
+color-eyre = "0.6.2"
+serde = { version = "1.0.158", features = ["derive"] }
+thiserror = "1.0.40"
+tokio = { version = "1.26.0", features = ["full"] }
+toml = "0.7.3"
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
