@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = ["github-webhook"]
+
 [[bin]]
 name = "shook"
 path = "src/main.rs"
@@ -13,6 +16,7 @@ path = "src/main.rs"
 argh = "0.1.10"
 axum = { version = "0.6.11", features = ["macros"] }
 color-eyre = "0.6.2"
+github-webhook = { version = "0.1.0", path = "github-webhook", features = ["axum"] }
 serde = { version = "1.0.158", features = ["derive"] }
 thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["full"] }

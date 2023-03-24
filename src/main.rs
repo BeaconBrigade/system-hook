@@ -33,7 +33,7 @@ async fn main() -> color_eyre::Result<()> {
     match args.action {
         Action::Init(init) => init_project::init(init),
         Action::Serve(serve) => server::serve(serve).await,
-        Action::Daemon(daemon) => daemon::daemon(daemon),
+        Action::Daemon(daemon) => daemon::daemon_message(daemon),
     }?;
 
     Ok(())

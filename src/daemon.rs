@@ -1,6 +1,6 @@
 use crate::config::{Daemon, DaemonAction};
 
-pub fn daemon(args: Daemon) -> color_eyre::Result<()> {
+pub fn daemon_message(args: Daemon) -> color_eyre::Result<()> {
     tracing::info!("talking to daemon");
     tracing::debug!("{:#?}", args);
 
