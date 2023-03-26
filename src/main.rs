@@ -6,7 +6,7 @@ mod server;
 
 use std::fs::OpenOptions;
 
-use config::{AppArgs, Action};
+use config::{Action, AppArgs};
 use std::fs::File;
 use tracing_subscriber::prelude::*;
 

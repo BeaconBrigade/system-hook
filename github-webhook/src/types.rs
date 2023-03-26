@@ -1,12 +1,13 @@
 //! Types specified on github [docs](https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads).
 use serde::{Deserialize, Serialize};
+use strum_macros::{EnumDiscriminants, EnumString};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GithubPayload {
-    pub sender: Sender,
-    pub organization: Organization,
-    pub repository: Repository,
-    pub installation: Installation,
+    pub guid: Uuid,
+    pub signature_sha1: Option<Vec<u8>>,
+    pub signature_sha256: Option<Vec<u8>>,
     pub event: Event,
 }
 
@@ -16,8 +17,10 @@ pub type Installation = Option<serde_json::Value>;
 pub type Enterprise = Option<serde_json::Value>;
 pub type Sender = serde_json::Value;
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, EnumString, EnumDiscriminants)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+#[strum_discriminants(derive(EnumString), strum(serialize_all = "snake_case"))]
 pub enum Event {
     BranchProtectionRule {
         action: String,
@@ -80,7 +83,7 @@ pub enum Event {
     PullRequestReviewThread {},
     Push {
         after: String,
-        base_ref: String,
+        base_ref: Option<String>,
         before: String,
         commits: Vec<Commit>,
         compare: String,
@@ -118,7 +121,20 @@ pub enum Event {
     WorkflowRun {},
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+impl Default for Event {
+    fn default() -> Self {
+        Self::Ping {
+            hook: Default::default(),
+            hook_id: Default::default(),
+            organization: Default::default(),
+            repository: Default::default(),
+            sender: Default::default(),
+            zen: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct BranchProtectionRule {
     pub admin_enforced: bool,
     pub allow_deletions_enforcement_level: String,
@@ -146,15 +162,16 @@ pub struct BranchProtectionRule {
     pub updated_at: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EnforcementLevel {
+    #[default]
     Off,
     NonAdmins,
     Everyone,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Hook {
     active: bool,
     app_id: Option<i64>,
@@ -172,7 +189,7 @@ pub struct Hook {
     url: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Config {
     content_type: ContentType,
     insecure_ssl: NumberOrString,
@@ -180,10 +197,11 @@ pub struct Config {
     url: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ContentType {
     Json,
+    #[default]
     Form,
 }
 
@@ -194,24 +212,31 @@ pub enum NumberOrString {
     String(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+impl Default for NumberOrString {
+    fn default() -> Self {
+        Self::String("".into())
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct LastResponse {
     code: Option<i64>,
     status: Option<String>,
     message: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Web {
+    #[default]
     Web,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Commit {
     added: Option<Vec<String>>,
     author: Author,
-    commiter: Commiter,
+    committer: Committer,
     distinct: bool,
     id: String,
     message: String,
@@ -222,7 +247,7 @@ pub struct Commit {
     url: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Author {
     date: Option<String>,
     email: String,
@@ -230,19 +255,19 @@ pub struct Author {
     username: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Commiter {
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct Committer {
     date: Option<String>,
-    email: String,
+    email: Option<String>,
     name: String,
     username: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct HeadCommit {
     added: Option<Vec<String>>,
     author: Author,
-    commiter: Commiter,
+    committer: Committer,
     distinct: bool,
     id: String,
     message: String,
@@ -253,7 +278,7 @@ pub struct HeadCommit {
     url: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Pusher {
     date: Option<String>,
     email: Option<String>,
