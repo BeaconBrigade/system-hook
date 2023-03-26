@@ -16,6 +16,7 @@ compile_error!("this program only runs on linux");
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
+    dotenvy::dotenv()?;
     let args: AppArgs = argh::from_env();
 
     let log_writer = match args.log_file {

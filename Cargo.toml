@@ -16,6 +16,7 @@ path = "src/main.rs"
 argh = "0.1.10"
 axum = { version = "0.6.11", features = ["macros"] }
 color-eyre = "0.6.2"
+dotenvy = "0.15.7"
 github-webhook = { version = "0.1.0", path = "github-webhook", features = ["axum"] }
 serde = { version = "1.0.158", features = ["derive"] }
 serde_json = "1.0.94"

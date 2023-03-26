@@ -6,8 +6,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GithubPayload {
     pub guid: Uuid,
-    pub signature_sha1: Option<Vec<u8>>,
-    pub signature_sha256: Option<Vec<u8>>,
+    pub signature_sha1: Option<String>,
+    pub signature_sha256: Option<String>,
     pub event: Event,
 }
 
