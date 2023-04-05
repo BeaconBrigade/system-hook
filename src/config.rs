@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, str::FromStr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, str::FromStr};
 
 use argh::FromArgs;
 use serde::{Deserialize, Serialize};

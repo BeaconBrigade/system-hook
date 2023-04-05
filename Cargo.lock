@@ -314,6 +314,7 @@ name = "github-webhook"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bytes",
  "digest",
  "generic-array",
  "hex",
@@ -326,6 +327,7 @@ dependencies = [
  "sha2",
  "strum",
  "strum_macros",
+ "thiserror",
  "tracing",
  "uuid",
 ]
