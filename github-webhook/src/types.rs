@@ -20,7 +20,11 @@ pub type Sender = serde_json::Value;
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, EnumString, EnumDiscriminants)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-#[strum_discriminants(derive(EnumString), strum(serialize_all = "snake_case"))]
+#[strum_discriminants(
+    derive(EnumString, Serialize, Deserialize),
+    strum(serialize_all = "snake_case"),
+    serde(rename_all = "snake_case")
+)]
 pub enum Event {
     BranchProtectionRule {
         action: String,

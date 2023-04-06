@@ -1,9 +1,10 @@
 use std::{net::SocketAddr, path::PathBuf, str::FromStr};
 
 use argh::FromArgs;
+use github_webhook::EventDiscriminants;
 use serde::{Deserialize, Serialize};
 
-use crate::error::DaemonActionParseError;
+use crate::error::TcpOrUnixParseError;
 
 /// shook: a webserver that listens for a webhook on
 /// a github repo, that will automatically restart your
@@ -32,49 +33,153 @@ pub enum Action {
 /// generate a shook config and service
 #[derive(Debug, Clone, FromArgs)]
 #[argh(subcommand, name = "init")]
-pub struct Init {}
+pub struct Init {
+    /// path to the repository
+    #[argh(option)]
+    pub repo_path: Option<PathBuf>,
+    /// path to `shook.toml`
+    #[argh(option)]
+    pub config_path: Option<PathBuf>,
+    /// name of systemd service to update when receiving a github event
+    #[argh(option)]
+    pub system_name: Option<String>,
+    /// allowed github events to update the server after receiving
+    #[argh(option, from_str_fn(parse_multiple_events))]
+    pub update_events: Option<Vec<EventDiscriminants>>,
+    /// address to serve on: a path to a unix socket, or an ip address for tcp
+    #[argh(option)]
+    pub addr: Option<TcpOrUnix>,
+}
 
-/// activate the webhook server
+/// init args without all the options
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitConfig {
+    pub repo_path: PathBuf,
+    pub config_path: PathBuf,
+    pub system_name: String,
+    pub update_events: Vec<EventDiscriminants>,
+    pub addr: TcpOrUnix,
+}
+
+/// activate the webhook server - each argument overrides the value in
+/// your `shook.toml`
 #[derive(Debug, Clone, FromArgs)]
 #[argh(subcommand, name = "serve")]
 pub struct Serve {
-    /// address to serve on
-    #[argh(option, default = "SocketAddr::new([127, 0, 0, 1].into(), 5002)")]
-    pub addr: SocketAddr,
+    /// override path to the repository
+    #[argh(option)]
+    pub repo_path: Option<PathBuf>,
+    /// override path to `shook.toml`
+    #[argh(option, default = r#"PathBuf::from("./shook.toml")"#)]
+    pub config_path: PathBuf,
+    /// override name of systemd service to update when receiving a github event
+    #[argh(option)]
+    pub system_name: Option<String>,
+    /// override github events to update the server after receiving
+    #[argh(option, from_str_fn(parse_multiple_events))]
+    pub update_events: Option<Vec<EventDiscriminants>>,
+    /// override address to serve on: a path to a unix socket, or an ip address for tcp
+    #[argh(option)]
+    pub addr: Option<TcpOrUnix>,
+}
+
+/// parse a string like: 'commit,push' into events to listen to
+pub fn parse_multiple_events(s: &str) -> Result<Vec<EventDiscriminants>, String> {
+    s.split(',')
+        .map(|s| EventDiscriminants::from_str(s).map_err(|e| e.to_string()))
+        .collect::<Result<Vec<_>, _>>()
 }
 
 /// speak with the shook daemon
 #[derive(Debug, Clone, FromArgs)]
 #[argh(subcommand, name = "daemon")]
 pub struct Daemon {
-    /// command for the daemon: start | stop | enable
-    #[argh(positional)]
+    /// command for the daemon
+    #[argh(subcommand)]
     pub action: DaemonAction,
 }
 
 /// command for the daemon
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, FromArgs)]
+#[argh(subcommand)]
 pub enum DaemonAction {
-    /// start service
-    Start,
-    /// stop service
-    Stop,
-    /// enable service at startup
-    Enable,
+    Start(DaemonStart),
+    Enable(DaemonEnable),
+    Stop(DaemonStop),
 }
 
-impl FromStr for DaemonAction {
-    type Err = DaemonActionParseError;
+/// start service
+#[derive(Debug, Clone, Copy, FromArgs)]
+#[argh(subcommand, name = "start")]
+pub struct DaemonStart {}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_ref() {
-            "start" => Ok(Self::Start),
-            "stop" => Ok(Self::Stop),
-            "enable" => Ok(Self::Enable),
-            _ => Err(DaemonActionParseError),
+/// stop service
+#[derive(Debug, Clone, Copy, FromArgs)]
+#[argh(subcommand, name = "stop")]
+pub struct DaemonStop {}
+
+/// enable service at startup
+#[derive(Debug, Clone, Copy, FromArgs)]
+#[argh(subcommand, name = "enable")]
+pub struct DaemonEnable {}
+
+/// server configuration parsed from `shook.toml`
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ServerConfig {
+    /// path to the repository
+    pub repo_path: PathBuf,
+    /// name of systemd service to update when receiving a github event
+    pub system_name: String,
+    /// github events to update the server after receiving
+    pub update_events: Vec<EventDiscriminants>,
+    /// address to serve on: a path to a unix socket, or an ip address for tcp
+    pub addr: TcpOrUnix,
+}
+
+impl ServerConfig {
+    pub fn merge(&mut self, cli: Serve) {
+        if let Some(p) = cli.repo_path {
+            self.repo_path = p;
+        }
+        if let Some(n) = cli.system_name {
+            self.system_name = n;
+        }
+        if let Some(e) = cli.update_events {
+            self.update_events = e;
+        }
+        if let Some(a) = cli.addr {
+            self.addr = a;
         }
     }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ServerConfig {}
+pub enum TcpOrUnix {
+    Tcp(SocketAddr),
+    Unix(PathBuf),
+}
+
+impl FromStr for TcpOrUnix {
+    type Err = TcpOrUnixParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(s) = SocketAddr::from_str(s) {
+            return Ok(Self::Tcp(s));
+        }
+
+        if let Ok(p) = PathBuf::from_str(s) {
+            return Ok(Self::Unix(p));
+        }
+
+        Err(TcpOrUnixParseError)
+    }
+}
+
+impl ToString for TcpOrUnix {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Tcp(s) => format!("{}", s),
+            Self::Unix(p) => format!("{}", p.to_string_lossy()),
+        }
+    }
+}

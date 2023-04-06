@@ -1,8 +1,21 @@
-use axum::{debug_handler, routing::post, Router};
-use github_webhook::GithubPayload;
-use tower_http::trace::TraceLayer;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
-use crate::config::Serve;
+use axum::{debug_handler, routing::post, Router};
+use color_eyre::eyre::Context as _;
+use futures::ready;
+use github_webhook::GithubPayload;
+use hyper::server::accept::Accept;
+use tokio::{
+    fs::{self, File},
+    io::AsyncReadExt,
+    net::{UnixListener, UnixStream},
+};
+use tower_http::{trace::TraceLayer, BoxError};
+
+use crate::config::{Serve, ServerConfig, TcpOrUnix};
 
 pub async fn serve(args: Serve) -> color_eyre::Result<()> {
     tracing::info!("serving project");
@@ -12,12 +25,57 @@ pub async fn serve(args: Serve) -> color_eyre::Result<()> {
         .route("/", post(handler))
         .layer(TraceLayer::new_for_http());
 
-    tracing::info!("serving on {}", args.addr);
-    axum::Server::bind(&args.addr)
-        .serve(app.into_make_service())
-        .await?;
+    let mut config: ServerConfig = {
+        let mut file = File::open(&args.config_path)
+            .await
+            .context("opening shook config")?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)
+            .await
+            .context("reading shook config")?;
+        toml::from_str(&buf).context("parsing shook config")?
+    };
+    config.merge(args);
+
+    tracing::info!("serving on {}", config.addr.to_string());
+    match config.addr {
+        TcpOrUnix::Unix(path) => {
+            let _ = fs::remove_file(&path).await;
+            fs::create_dir_all(path.parent().unwrap()).await.unwrap();
+
+            let uds = UnixListener::bind(path.clone()).unwrap();
+
+            axum::Server::builder(ServerAccept { uds })
+                .serve(app.into_make_service())
+                .await
+                .unwrap();
+        }
+        TcpOrUnix::Tcp(socket) => {
+            axum::Server::bind(&socket)
+                .serve(app.into_make_service())
+                .await?;
+        }
+    };
 
     Ok(())
+}
+
+#[derive(Debug)]
+struct ServerAccept {
+    uds: UnixListener,
+}
+
+impl Accept for ServerAccept {
+    type Conn = UnixStream;
+    type Error = BoxError;
+
+    fn poll_accept(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
+        let (stream, _addr) = ready!(self.uds.poll_accept(cx))?;
+        Poll::Ready(Some(Ok(stream)))
+    }
 }
 
 #[debug_handler]
