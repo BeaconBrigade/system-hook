@@ -1,0 +1,13 @@
+[Unit]
+Desription=shook github webhook server
+After=network.target
+
+[Service]
+WorkingDirectory={REPO_PATH}
+ExecStart=shook --log-file /var/log/shook.log --log-level 'shook=info,github_webhook=info' serve
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target

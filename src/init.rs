@@ -1,8 +1,9 @@
 use std::{
     fs::{self, File},
+    io::Write,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    str::FromStr, io::Write,
+    str::FromStr,
 };
 
 use color_eyre::eyre::{eyre, Context};
@@ -10,7 +11,10 @@ use dialoguer::{theme::ColorfulTheme, Completion, Confirm, Input};
 use github_webhook::EventDiscriminants;
 use text_completions::{EnvCompletion, MultiCompletion, PathCompletion};
 
-use crate::config::{parse_multiple_events, Init, InitConfig};
+use crate::config::{parse_multiple_events, Init, InitConfig, TcpOrUnix};
+
+const SERVICE_TEMPLATE: &str = include_str!("shook.service");
+const SERVICE_PATH: &str = "/etc/systemd/system/shook.service";
 
 pub fn init_project(args: Init) -> color_eyre::Result<()> {
     tracing::info!("creating project");
@@ -24,9 +28,10 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         args.system_name,
     )?;
     let update_events = get_input_events("github events to update", args.update_events)?;
-    let addr = get_input(
+    let addr = get_input_default(
         "address to serve on (unix socket path or tcp address)",
         args.addr,
+        TcpOrUnix::Unix("/var/run/shook.sock".into()),
     )?;
 
     let config = InitConfig {
@@ -42,12 +47,12 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         tracing::warn!("repository could not be found");
 
         let should_clone = Confirm::with_theme(&ColorfulTheme::default())
-            .with_prompt("Clone the repository?")
+            .with_prompt("clone the repository?")
             .interact()?;
 
         if should_clone {
             let url: String = Input::with_theme(&ColorfulTheme::default())
-                .with_prompt("Repository url")
+                .with_prompt("repository url")
                 .interact_text()?;
 
             tracing::info!("cloning repository into {:?}", config.repo_path);
@@ -69,7 +74,11 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
                 .stderr(Stdio::piped())
                 .spawn()?;
             let exit_code = handle.wait()?;
-            tracing::debug!("git exited with exit code {exit_code}");
+            tracing::debug!("git exited with exit code {:?}", exit_code.code());
+            if exit_code.code().unwrap_or(1) != 0 {
+                tracing::error!("could not clone repository");
+                return Err(eyre!("could not clone repository"));
+            }
         }
     }
 
@@ -80,7 +89,7 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         tracing::warn!("{:?} already exists", config_path);
 
         let should_replace = Confirm::with_theme(&ColorfulTheme::default())
-            .with_prompt("Replace existing shook.toml?")
+            .with_prompt("replace existing shook.toml?")
             .interact()?;
         if !should_replace {
             tracing::info!("aborting init process");
@@ -89,12 +98,37 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
     }
 
     let mut file = File::create(&config_path).context("creating shook.toml")?;
-    file.write_all(toml.as_bytes())?;
+    file.write_all(toml.as_bytes())
+        .context("writing shook.toml")?;
     tracing::info!("finished writing shook.toml");
 
-    tracing::info!("finished creating project");
+    let systemd = SERVICE_TEMPLATE.replace(
+        "{REPO_PATH}",
+        config
+            .repo_path
+            .to_str()
+            .ok_or_else(|| eyre!("repo path is not vaid utf8"))?,
+    );
 
-    // TODO: install systemd config for shook
+    tracing::info!("installing systemd config");
+    tracing::debug!("systemd file:\n{}", systemd);
+    let service_path = PathBuf::from(SERVICE_PATH);
+    if Path::exists(&service_path) {
+        tracing::warn!("shook.service already exists");
+
+        let should_replace = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("replace existing shook.service")
+            .interact()?;
+        if !should_replace {
+            return Err(eyre!("aborting due to existing service"));
+        }
+    }
+
+    let mut file = File::create(&service_path).context("creating shook.service")?;
+    file.write_all(systemd.as_bytes())
+        .context("writing shook.service")?;
+
+    tracing::info!("finished creating project");
 
     Ok(())
 }
@@ -109,6 +143,22 @@ where
     }
     let res = Input::with_theme(&ColorfulTheme::default())
         .with_prompt(prompt)
+        .interact_text()?;
+
+    Ok(res)
+}
+
+fn get_input_default<T>(prompt: &str, initial: Option<T>, default: T) -> color_eyre::Result<T>
+where
+    T: Clone + ToString + FromStr,
+    <T as FromStr>::Err: std::fmt::Debug + ToString,
+{
+    if let Some(v) = initial {
+        return Ok(v);
+    }
+    let res = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt(prompt)
+        .default(default)
         .interact_text()?;
 
     Ok(res)
