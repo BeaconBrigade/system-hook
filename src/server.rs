@@ -1,4 +1,5 @@
 use std::{
+    path::PathBuf,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -26,7 +27,12 @@ pub async fn serve(args: Serve) -> color_eyre::Result<()> {
         .layer(TraceLayer::new_for_http());
 
     let mut config: ServerConfig = {
-        let mut file = File::open(&args.config_path)
+        let config_path = args
+            .repo_path
+            .clone()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("shook.toml");
+        let mut file = File::open(&config_path)
             .await
             .context("opening shook config")?;
         let mut buf = String::new();

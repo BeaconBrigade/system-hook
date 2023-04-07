@@ -1,21 +1,24 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{
+    fs::{self, File},
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+    str::FromStr, io::Write,
+};
 
-use color_eyre::eyre::eyre;
-use dialoguer::{theme::ColorfulTheme, Input};
+use color_eyre::eyre::{eyre, Context};
+use dialoguer::{theme::ColorfulTheme, Completion, Confirm, Input};
 use github_webhook::EventDiscriminants;
+use text_completions::{EnvCompletion, MultiCompletion, PathCompletion};
 
 use crate::config::{parse_multiple_events, Init, InitConfig};
 
 pub fn init_project(args: Init) -> color_eyre::Result<()> {
     tracing::info!("creating project");
 
-    // TODO: better handling of bad inputs - ask the user to retry instead of ending the program
-    let repo_path = get_input("path to the repository", args.repo_path.map(PathBufWrapper))?.0;
-    let config_path = get_input(
-        "path to create `shook.toml`",
-        args.config_path.map(PathBufWrapper),
-    )?
-    .0;
+    let completion = MultiCompletion::default()
+        .with(EnvCompletion::default())
+        .with(PathCompletion::default());
+    let repo_path = get_input_pathbuf("path to the repository", args.repo_path, &completion)?;
     let system_name = get_input(
         "name of systemd service to update on github events",
         args.system_name,
@@ -28,7 +31,6 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
 
     let config = InitConfig {
         repo_path,
-        config_path,
         system_name,
         update_events,
         addr,
@@ -36,24 +38,65 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
 
     tracing::debug!(?config);
 
+    if !Path::try_exists(&config.repo_path)? {
+        tracing::warn!("repository could not be found");
+
+        let should_clone = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("Clone the repository?")
+            .interact()?;
+
+        if should_clone {
+            let url: String = Input::with_theme(&ColorfulTheme::default())
+                .with_prompt("Repository url")
+                .interact_text()?;
+
+            tracing::info!("cloning repository into {:?}", config.repo_path);
+            let parent = config
+                .repo_path
+                .parent()
+                .ok_or_else(|| eyre!("repo-path has no parent"))?;
+            if !Path::try_exists(parent)? {
+                tracing::info!("creating {:?}", parent);
+                fs::create_dir_all(parent)?;
+            }
+
+            let mut handle = Command::new("git")
+                .arg("clone")
+                .arg(url)
+                .arg(config.repo_path.file_name().unwrap())
+                .current_dir(parent)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?;
+            let exit_code = handle.wait()?;
+            tracing::debug!("git exited with exit code {exit_code}");
+        }
+    }
+
+    let toml = toml::to_string_pretty(&config).context("serializing config to toml")?;
+
+    let config_path = config.repo_path.join("shook.toml");
+    if Path::exists(&config_path) {
+        tracing::warn!("{:?} already exists", config_path);
+
+        let should_replace = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("Replace existing shook.toml?")
+            .interact()?;
+        if !should_replace {
+            tracing::info!("aborting init process");
+            return Err(eyre!("aborting due to existing config"));
+        }
+    }
+
+    let mut file = File::create(&config_path).context("creating shook.toml")?;
+    file.write_all(toml.as_bytes())?;
+    tracing::info!("finished writing shook.toml");
+
+    tracing::info!("finished creating project");
+
+    // TODO: install systemd config for shook
+
     Ok(())
-}
-
-#[derive(Debug, Clone)]
-struct PathBufWrapper(PathBuf);
-
-impl FromStr for PathBufWrapper {
-    type Err = <PathBuf as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(PathBuf::from_str(s)?))
-    }
-}
-
-impl ToString for PathBufWrapper {
-    fn to_string(&self) -> String {
-        format!("{}", self.0.to_string_lossy())
-    }
 }
 
 fn get_input<T>(prompt: &str, initial: Option<T>) -> color_eyre::Result<T>
@@ -71,6 +114,31 @@ where
     Ok(res)
 }
 
+fn get_input_pathbuf(
+    prompt: &str,
+    initial: Option<PathBuf>,
+    completion: &MultiCompletion,
+) -> color_eyre::Result<PathBuf> {
+    if let Some(v) = initial {
+        return Ok(v);
+    }
+
+    let path = loop {
+        let res: String = Input::with_theme(&ColorfulTheme::default())
+            .with_prompt(prompt)
+            .completion_with(completion)
+            .interact_text()?;
+
+        let res = completion.get(&res).unwrap_or(res);
+        if let Ok(p) = PathBuf::from(res).canonicalize() {
+            break p;
+        }
+        tracing::warn!("type in a valid path");
+    };
+
+    Ok(path)
+}
+
 fn get_input_events(
     prompt: &str,
     initial: Option<Vec<EventDiscriminants>>,
@@ -78,12 +146,17 @@ fn get_input_events(
     if let Some(v) = initial {
         return Ok(v);
     }
-    let str: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt(prompt)
-        .default("push".into())
-        .interact_text()?;
+    let res = loop {
+        let str: String = Input::with_theme(&ColorfulTheme::default())
+            .with_prompt(prompt)
+            .default("push".into())
+            .interact_text()?;
 
-    let res = parse_multiple_events(&str).map_err(|e| eyre!(e))?;
+        if let Ok(e) = parse_multiple_events(&str) {
+            break e;
+        }
+        tracing::warn!("type in a comma delimited list of valid events, refer to https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads");
+    };
 
     Ok(res)
 }

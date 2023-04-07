@@ -37,9 +37,6 @@ pub struct Init {
     /// path to the repository
     #[argh(option)]
     pub repo_path: Option<PathBuf>,
-    /// path to `shook.toml`
-    #[argh(option)]
-    pub config_path: Option<PathBuf>,
     /// name of systemd service to update when receiving a github event
     #[argh(option)]
     pub system_name: Option<String>,
@@ -55,7 +52,6 @@ pub struct Init {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InitConfig {
     pub repo_path: PathBuf,
-    pub config_path: PathBuf,
     pub system_name: String,
     pub update_events: Vec<EventDiscriminants>,
     pub addr: TcpOrUnix,
@@ -69,9 +65,6 @@ pub struct Serve {
     /// override path to the repository
     #[argh(option)]
     pub repo_path: Option<PathBuf>,
-    /// override path to `shook.toml`
-    #[argh(option, default = r#"PathBuf::from("./shook.toml")"#)]
-    pub config_path: PathBuf,
     /// override name of systemd service to update when receiving a github event
     #[argh(option)]
     pub system_name: Option<String>,
@@ -154,6 +147,7 @@ impl ServerConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type", content = "value")]
 pub enum TcpOrUnix {
     Tcp(SocketAddr),
     Unix(PathBuf),

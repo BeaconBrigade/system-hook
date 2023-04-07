@@ -797,14 +797,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pathbuf-completions"
-version = "0.1.0"
-dependencies = [
- "dialoguer",
- "envmnt",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1139,6 +1131,7 @@ dependencies = [
  "hyper",
  "serde",
  "serde_json",
+ "text-completions",
  "thiserror",
  "tokio",
  "toml",
@@ -1158,6 +1151,14 @@ dependencies = [
  "redox_syscall 0.3.5",
  "rustix",
  "windows-sys 0.45.0",
+]
+
+[[package]]
+name = "text-completions"
+version = "0.1.0"
+dependencies = [
+ "dialoguer",
+ "envmnt",
 ]
 
 [[package]]

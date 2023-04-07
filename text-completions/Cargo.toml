@@ -1,5 +1,5 @@
 [package]
-name = "pathbuf-completions"
+name = "text-completions"
 version = "0.1.0"
 edition = "2021"
 
