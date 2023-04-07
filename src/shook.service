@@ -1,5 +1,5 @@
 [Unit]
-Desription=shook github webhook server
+Description=shook github webhook server
 After=network.target
 
 [Service]
