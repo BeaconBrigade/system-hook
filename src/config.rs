@@ -34,9 +34,18 @@ pub enum Action {
 #[derive(Debug, Clone, FromArgs)]
 #[argh(subcommand, name = "init")]
 pub struct Init {
+    /// linux user name to run git with
+    #[argh(option)]
+    pub username: Option<String>,
     /// path to the repository
     #[argh(option)]
     pub repo_path: Option<PathBuf>,
+    /// the remote to track for pulling changes
+    #[argh(option)]
+    pub remote: Option<String>,
+    /// the branch to track for pulling changes
+    #[argh(option)]
+    pub branch: Option<String>,
     /// name of systemd service to update when receiving a github event
     #[argh(option)]
     pub system_name: Option<String>,
@@ -51,7 +60,10 @@ pub struct Init {
 /// init args without all the options
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InitConfig {
+    pub username: String,
     pub repo_path: PathBuf,
+    pub remote: String,
+    pub branch: String,
     pub system_name: String,
     pub update_events: Vec<EventDiscriminants>,
     pub addr: TcpOrUnix,
@@ -62,9 +74,18 @@ pub struct InitConfig {
 #[derive(Debug, Clone, FromArgs)]
 #[argh(subcommand, name = "serve")]
 pub struct Serve {
+    /// linux user name to run git with
+    #[argh(option)]
+    pub username: Option<String>,
     /// override path to the repository
     #[argh(option)]
     pub repo_path: Option<PathBuf>,
+    /// override remote to track for pulling changes
+    #[argh(option)]
+    pub remote: Option<String>,
+    /// override branch to track for pulling changes
+    #[argh(option)]
+    pub branch: Option<String>,
     /// override name of systemd service to update when receiving a github event
     #[argh(option)]
     pub system_name: Option<String>,
@@ -119,8 +140,14 @@ pub struct DaemonEnable {}
 /// server configuration parsed from `shook.toml`
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ServerConfig {
+    /// linux user name to run git with
+    pub username: String,
     /// path to the repository
     pub repo_path: PathBuf,
+    /// the remote to track for pulling changes
+    pub remote: String,
+    /// the branch to track for pulling changes
+    pub branch: String,
     /// name of systemd service to update when receiving a github event
     pub system_name: String,
     /// github events to update the server after receiving

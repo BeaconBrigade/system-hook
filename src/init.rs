@@ -2,7 +2,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
     str::FromStr,
 };
 
@@ -22,7 +22,18 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
     let completion = MultiCompletion::default()
         .with(EnvCompletion::default())
         .with(PathCompletion::default());
+    let username = get_input("the linux user to run git as", args.username)?;
     let repo_path = get_input_pathbuf("path to the repository", args.repo_path, &completion)?;
+    let remote = get_input_default(
+        "the remote to track for changes",
+        args.remote,
+        "origin".to_string(),
+    )?;
+    let branch = get_input_default(
+        "the branch to track for changes",
+        args.branch,
+        "main".to_string(),
+    )?;
     let system_name = get_input(
         "name of systemd service to update on github events",
         args.system_name,
@@ -35,7 +46,10 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
     )?;
 
     let config = InitConfig {
+        username,
         repo_path,
+        remote,
+        branch,
         system_name,
         update_events,
         addr,
@@ -65,13 +79,15 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
                 fs::create_dir_all(parent)?;
             }
 
-            let mut handle = Command::new("git")
-                .arg("clone")
-                .arg(url)
-                .arg(config.repo_path.file_name().unwrap())
+            let mut handle = Command::new("su")
+                .arg(&config.username)
+                .arg("-c")
+                .arg(format!(
+                    "git clone '{}' '{}'",
+                    url,
+                    config.repo_path.to_string_lossy()
+                ))
                 .current_dir(parent)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
                 .spawn()?;
             let exit_code = handle.wait()?;
             tracing::debug!("git exited with exit code {:?}", exit_code.code());

@@ -1,4 +1,4 @@
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use color_eyre::eyre::{eyre, Context};
 
@@ -37,8 +37,6 @@ fn run_systemctl_command(name: &str) -> color_eyre::Result<()> {
     let mut handle = Command::new("systemctl")
         .arg(name)
         .arg("shook.service")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .context("spawning systemctl")?;
 
