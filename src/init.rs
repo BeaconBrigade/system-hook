@@ -44,6 +44,18 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         args.addr,
         TcpOrUnix::Unix("/var/run/shook.sock".into()),
     )?;
+    let (socket_group, socket_user) = if let TcpOrUnix::Unix(_) = addr {
+        let group = get_input_default(
+            "group to put socket under",
+            args.socket_group,
+            "www-data".to_string(),
+        )?;
+        let user = get_input_default("user to put socket under", args.socket_user, "www-data".to_string())?;
+
+        (group, user)
+    } else {
+        ("".to_string(), "".to_string())
+    };
 
     let config = InitConfig {
         username,
@@ -53,6 +65,8 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         system_name,
         update_events,
         addr,
+        socket_group,
+        socket_user,
     };
 
     tracing::debug!(?config);

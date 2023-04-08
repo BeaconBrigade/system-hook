@@ -1,5 +1,6 @@
 use std::{
-    path::PathBuf,
+    os::fd::AsRawFd,
+    path::{Path, PathBuf},
     pin::Pin,
     process::Command,
     task::{Context, Poll},
@@ -10,6 +11,10 @@ use color_eyre::eyre::{eyre, Context as _};
 use futures::ready;
 use github_webhook::GithubPayload;
 use hyper::{server::accept::Accept, StatusCode};
+use nix::{
+    sys::stat::{fchmod, Mode},
+    unistd::{chown, Gid, Uid},
+};
 use tokio::{
     fs::{self, File},
     io::AsyncReadExt,
@@ -54,11 +59,18 @@ pub async fn serve(args: Serve) -> color_eyre::Result<()> {
             fs::create_dir_all(path.parent().unwrap()).await.unwrap();
 
             let uds = UnixListener::bind(path.clone()).unwrap();
+            chown(
+                &path,
+                Some(user_id(&config.socket_user).await?),
+                Some(group_id(&config.socket_group).await?),
+            )
+            .context("changing socket owner and group")?;
+            fchmod(uds.as_raw_fd(), Mode::from_bits(0o666).unwrap())
+                .context("changing socket permissions")?;
 
             axum::Server::builder(ServerAccept { uds })
                 .serve(app.into_make_service())
-                .await
-                .unwrap();
+                .await?;
         }
         TcpOrUnix::Tcp(socket) => {
             axum::Server::bind(&socket)
@@ -123,7 +135,7 @@ fn pull_updates(state: &AppState) -> color_eyre::Result<()> {
 
     let status = handle.wait()?;
     tracing::info!(
-        "tracing finished with exit code {:?}",
+        "git finished with exit code {:?}",
         status
             .code()
             .map(|s| s.to_string())
@@ -151,7 +163,7 @@ fn restart_service(state: &AppState) -> color_eyre::Result<()> {
         .wait()
         .map_err(|e| eyre!("error waiting for systemctl: {e}"))?;
     tracing::info!(
-        "tracing finished with exit code {:?}",
+        "systemctl finished with exit code {:?}",
         status
             .code()
             .map(|s| s.to_string())
@@ -162,6 +174,102 @@ fn restart_service(state: &AppState) -> color_eyre::Result<()> {
     }
 
     Ok(())
+}
+
+/// get the group id of a group from /etc/group file
+#[instrument(skip_all)]
+async fn group_id(name: &str) -> color_eyre::Result<Gid> {
+    let groups = fs::read_to_string("/etc/group").await?;
+    #[derive(Debug)]
+    struct Entry<'a> {
+        name: &'a str,
+        _password: &'a str,
+        gid: Gid,
+        _group_list: Vec<&'a str>,
+    }
+
+    for line in groups.lines() {
+        let mut parts = line.split(':');
+        let ent = Entry {
+            name: parts
+                .next()
+                .ok_or_else(|| eyre!("error parsing /etc/group: name missing"))?,
+            _password: parts
+                .next()
+                .ok_or_else(|| eyre!("error parsing /etc/group: password missing"))?,
+            gid: parts
+                .next()
+                .and_then(|s| s.parse().ok())
+                .map(Gid::from_raw)
+                .ok_or_else(|| eyre!("error parsing /etc/group: gid missing"))?,
+            _group_list: parts
+                .next()
+                .ok_or_else(|| eyre!("error parsing /etc/group: users missing"))?
+                .split(',')
+                .collect::<Vec<_>>(),
+        };
+        if ent.name == name {
+            tracing::debug!("found group: {:?}", ent);
+            return Ok(ent.gid);
+        }
+    }
+
+    Err(eyre!("entry not found"))
+}
+
+/// get the user id of a user from /etc/passwd file
+#[instrument(skip_all)]
+async fn user_id(name: &str) -> color_eyre::Result<Uid> {
+    let passwd = fs::read_to_string("/etc/passwd").await?;
+    #[derive(Debug)]
+    struct Entry<'a> {
+        name: &'a str,
+        _password: &'a str,
+        uid: Uid,
+        _gid: Gid,
+        _info: &'a str,
+        _home: &'a Path,
+        _shell: &'a Path,
+    }
+
+    for line in passwd.lines() {
+        let mut parts = line.split(':');
+        let ent = Entry {
+            name: parts
+                .next()
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: name missing"))?,
+            _password: parts
+                .next()
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: password missing"))?,
+            uid: parts
+                .next()
+                .and_then(|s| s.parse().ok())
+                .map(Uid::from_raw)
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: uid missing"))?,
+            _gid: parts
+                .next()
+                .and_then(|s| s.parse().ok())
+                .map(Gid::from_raw)
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: gid missing"))?,
+            _info: parts
+                .next()
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: info/comment missing"))?,
+            _home: parts
+                .next()
+                .map(Path::new)
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: home dir missing"))?,
+            _shell: parts
+                .next()
+                .map(Path::new)
+                .ok_or_else(|| eyre!("error parsing /etc/passwd: login shell missing"))?,
+        };
+        if ent.name == name {
+            tracing::debug!("found user: {:?}", ent);
+            return Ok(ent.uid);
+        }
+    }
+
+    Err(eyre!("entry not found"))
 }
 
 #[derive(Debug)]

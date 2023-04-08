@@ -34,7 +34,7 @@ pub enum Action {
 #[derive(Debug, Clone, FromArgs)]
 #[argh(subcommand, name = "init")]
 pub struct Init {
-    /// linux user name to run git with
+    /// unix user name to run git with
     #[argh(option)]
     pub username: Option<String>,
     /// path to the repository
@@ -55,6 +55,14 @@ pub struct Init {
     /// address to serve on: a path to a unix socket, or an ip address for tcp
     #[argh(option)]
     pub addr: Option<TcpOrUnix>,
+    /// the unix group to put the unix socket under. should be group your server/proxy
+    /// is running using. e.g.: if nginx: www-data (only applicable if serving over unix socket)
+    #[argh(option)]
+    pub socket_group: Option<String>,
+    /// the owner of the unix socket. should be set to the user your server/proxy
+    /// is running under. e.g.: if nginx the user should be www-data
+    #[argh(option)]
+    pub socket_user: Option<String>,
 }
 
 /// init args without all the options
@@ -67,6 +75,8 @@ pub struct InitConfig {
     pub system_name: String,
     pub update_events: Vec<EventDiscriminants>,
     pub addr: TcpOrUnix,
+    pub socket_group: String,
+    pub socket_user: String,
 }
 
 /// activate the webhook server - each argument overrides the value in
@@ -95,6 +105,14 @@ pub struct Serve {
     /// override address to serve on: a path to a unix socket, or an ip address for tcp
     #[argh(option)]
     pub addr: Option<TcpOrUnix>,
+    /// override the unix group to put the unix socket under. should be group your server/proxy
+    /// is running using. e.g.: if nginx: www-data (only applicable if serving over unix socket)
+    #[argh(option)]
+    pub socket_group: Option<String>,
+    /// override the owner of the unix socket. should be set to the user your server/proxy
+    /// is running under. e.g.: if nginx the user should be www-data
+    #[argh(option)]
+    pub socket_user: Option<String>,
 }
 
 /// parse a string like: 'commit,push' into events to listen to
@@ -154,6 +172,12 @@ pub struct ServerConfig {
     pub update_events: Vec<EventDiscriminants>,
     /// address to serve on: a path to a unix socket, or an ip address for tcp
     pub addr: TcpOrUnix,
+    /// override the unix group to put the unix socket under. should be group your server/proxy
+    /// is running using. e.g.: if nginx: www-data (only applicable if serving over unix socket)
+    pub socket_group: String,
+    /// override the owner of the unix socket. should be set to the user your server/proxy
+    /// is running under. e.g.: if nginx the user should be www-data
+    pub socket_user: String,
 }
 
 impl ServerConfig {
