@@ -10,8 +10,8 @@
 mod axum;
 mod types;
 
-use std::env;
 use bytes::Bytes;
+use std::env;
 pub use types::*;
 
 use digest::CtOutput;
@@ -55,9 +55,7 @@ pub fn verify(
             })?;
             mac.update(&bytes);
             let result = mac.finalize();
-            let signature = hex::decode(
-                sha1.split_once('=').ok_or(VerifyError::Sha1ParseError)?.1,
-            )
+            let signature = hex::decode(sha1.split_once('=').ok_or(VerifyError::Sha1ParseError)?.1)
                 .map_err(|e| {
                     tracing::debug!(?e);
                     VerifyError::HexParseError
@@ -80,12 +78,16 @@ pub fn verify(
             })?;
             mac.update(&bytes);
             let result = mac.finalize();
-            let signature =
-                hex::decode(sha256.split_once('=').ok_or(VerifyError::Sha256ParseError)?.1)
-                    .map_err(|e| {
-                        tracing::debug!(?e);
-                        VerifyError::HexParseError
-                    })?;
+            let signature = hex::decode(
+                sha256
+                    .split_once('=')
+                    .ok_or(VerifyError::Sha256ParseError)?
+                    .1,
+            )
+            .map_err(|e| {
+                tracing::debug!(?e);
+                VerifyError::HexParseError
+            })?;
 
             if result != CtOutput::new(*GenericArray::from_slice(&signature)) {
                 return Err(VerifyError::NotVerified);
