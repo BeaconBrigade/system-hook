@@ -5,7 +5,6 @@ edition = "2021"
 description = "Parse and verify Github webhook requests"
 categories = ["webhook", "web", "github"]
 license = "MIT"
-license-file = "LICENSE.txt"
 homepage = "https://github.com/beaconbrigade/system-hook/tree/master/github-webhook"
 repository = "https://github.com/beaconbrigade/system-hook.git"
 documentation = "https://docs.rs/github-webhook"

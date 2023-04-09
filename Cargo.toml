@@ -5,7 +5,6 @@ edition = "2021"
 description = "shook: webhook server to automatically update production servers"
 categories = ["webhook", "systemd", "ci"]
 license = "MIT"
-license-file = "LICENSE.txt"
 documentation = "https://docs.rs/shook"
 homepage = "https://github.com/beaconbrigade/system-hook"
 repository = "https://github.com/beaconbrigade/system-hook.git"
