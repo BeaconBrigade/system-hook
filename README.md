@@ -93,7 +93,7 @@ in one terminal, `gh webhook ...` in another and `./update.sh` in a third you ca
 
 `shook` creates its own `systemd` service to start listening for events. The `shook` service simply runs
 `shook serve` from the right directory and sets a default logging level and log file to `/var/log/shook.log`.
-The `github-webhook` crate provides route extractors for a Github webhook event (note: `github-webhook` supports
+The `github-webhook-extract` crate provides route extractors for a Github webhook event (note: `github-webhook-extract` supports
 _very_ few events at the moment). The `text-completions` crate provides environment variable and path tab
 completions for the `shook init` command.
 

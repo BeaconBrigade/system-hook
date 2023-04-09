@@ -9,7 +9,7 @@ use std::{
 use axum::{debug_handler, extract::State, routing::post, Router};
 use color_eyre::eyre::{eyre, Context as _};
 use futures::ready;
-use github_webhook::GithubPayload;
+use github_webhook_extract::GithubPayload;
 use hyper::{server::accept::Accept, StatusCode};
 use nix::{
     sys::stat::{fchmod, Mode},

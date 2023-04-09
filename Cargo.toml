@@ -12,7 +12,7 @@ repository = "https://github.com/beaconbrigade/system-hook.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["github-webhook", "text-completions"]
+members = ["github-webhook-extract", "text-completions"]
 
 [[bin]]
 name = "shook"
@@ -25,7 +25,7 @@ color-eyre = "0.6.2"
 dialoguer = { version = "0.10", features = ["completion"] }
 dotenvy = "0.15.7"
 futures = "0.3.28"
-github-webhook = { version = "0.1.0", path = "github-webhook", features = ["axum"] }
+github-webhook-extract = { version = "0.1.0", path = "github-webhook-extract", features = ["axum"] }
 hyper = { version = "0.14.25", features = ["full"] }
 nix = { version = "0.26.2", features = ["user", "fs"], default-features = false }
 serde = { version = "1.0.158", features = ["derive"] }

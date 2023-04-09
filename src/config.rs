@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, path::PathBuf, str::FromStr};
 
 use argh::FromArgs;
-use github_webhook::EventDiscriminants;
+use github_webhook_extract::EventDiscriminants;
 use serde::{Deserialize, Serialize};
 
 use crate::error::TcpOrUnixParseError;

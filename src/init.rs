@@ -8,7 +8,7 @@ use std::{
 
 use color_eyre::eyre::{eyre, Context};
 use dialoguer::{theme::ColorfulTheme, Completion, Confirm, Input};
-use github_webhook::EventDiscriminants;
+use github_webhook_extract::EventDiscriminants;
 use text_completions::{EnvCompletion, MultiCompletion, PathCompletion};
 
 use crate::config::{parse_multiple_events, Init, InitConfig, TcpOrUnix};

@@ -1,13 +1,13 @@
 [package]
-name = "github-webhook"
+name = "github-webhook-extract"
 version = "0.1.0"
 edition = "2021"
 description = "Parse and verify Github webhook requests"
 categories = ["webhook", "web", "github"]
 license = "MIT"
-homepage = "https://github.com/beaconbrigade/system-hook/tree/master/github-webhook"
+homepage = "https://github.com/beaconbrigade/system-hook/tree/master/github-webhook-extract"
 repository = "https://github.com/beaconbrigade/system-hook.git"
-documentation = "https://docs.rs/github-webhook"
+documentation = "https://docs.rs/github-webhook-extract"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
