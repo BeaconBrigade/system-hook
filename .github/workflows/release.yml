@@ -47,5 +47,5 @@ jobs:
           files: "shook-*"
           body: |
             This is a new release for system-hook.
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
