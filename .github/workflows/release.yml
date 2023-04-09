@@ -9,19 +9,20 @@ jobs:
   release:
     name: Release - ${{ matrix.platform.release_for }}
     strategy:
-      platform:
-        - release_for: linux-x86_64
-          os: debian-11
-          target: x86_64-unknown-linux-gnu
-          bin: shook
-          name: shook-x86_64-unknown-linux-${{ github.ref }}.tar.gz
-          command: build
-        - release_for: linux-aarch64
-          os: debian-11
-          target: aarch64-unknown-linux-gnu
-          bin: shook
-          name: shook-aarch64-unknown-linux-gnu-${{ github.ref }}.tar.gz
-          command: build
+      matrix:
+        platform:
+          - release_for: linux-x86_64
+            os: ubuntu-20.04
+            target: x86_64-unknown-linux-gnu
+            bin: shook
+            name: shook-x86_64-unknown-linux-${{ github.ref }}.tar.gz
+            command: build
+          - release_for: linux-aarch64
+            os: ubuntu-20.04
+            target: aarch64-unknown-linux-gnu
+            bin: shook
+            name: shook-aarch64-unknown-linux-gnu-${{ github.ref }}.tar.gz
+            command: build
 
     runs-on: ${{ matrix.platform.os }}
     steps:
