@@ -2,6 +2,13 @@
 name = "text-completions"
 version = "0.1.0"
 edition = "2021"
+description = "Environment and file path completions for dialoguer"
+categories = ["cli", "prompt", "completion"]
+license = "MIT"
+license-file = "LICENSE.txt"
+homepage = "https://github.com/beaconbrigade/system-hook/tree/master/text-completions"
+repository = "https://github.com/beaconbrigade/system-hook.git"
+documentation = "https://docs.rs/text-completions"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

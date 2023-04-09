@@ -2,6 +2,13 @@
 name = "system-hook"
 version = "0.1.0"
 edition = "2021"
+description = "shook: webhook server to automatically update production servers"
+categories = ["webhook", "systemd", "ci"]
+license = "MIT"
+license-file = "LICENSE.txt"
+documentation = "https://docs.rs/shook"
+homepage = "https://github.com/beaconbrigade/system-hook"
+repository = "https://github.com/beaconbrigade/system-hook.git"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
