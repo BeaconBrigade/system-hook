@@ -22,7 +22,7 @@ cargo binstall system-hook
 
 ### Github Releases
 
-`shook` can be downloaded from [Github Releases](https://github.com/cargo-bins/cargo-binstall/releases/latest)
+`shook` can be downloaded from [Github Releases](https://github.com/beaconbrigade/system-hook/releases/latest)
 
 ### Build from Source
 
