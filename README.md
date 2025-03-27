@@ -53,7 +53,7 @@ After generating a `shook.toml`, `shook` can be run using `shook serve` which st
 in your terminal, or by running `sudo shook daemon start` which starts the `shook` systemd service.
 For testing out `shook` it is good to play with `shook serve`, you can use command line arguments
 to augment values in the `shook.toml` file. When running in production it would probably be more helpful
-to run `sudo shook daemon enable` so `shook` is started when your computer starts. note: `shook daemon`
+to run `sudo shook daemon enable` so `shook` is started when your computer starts. Note: `shook daemon`
 just runs `systemctl` `start`, `stop` and `enable` under the hood, so you can bypass `shook` and run those
 directly if you want.
 
@@ -85,7 +85,7 @@ http {
 
 As a side note, it can be really handy to test if your webhook server is working. You can use the 
 [Github CLI](https://cli.github.com/) to help with this. Refer to [here](https://docs.github.com/en/webhooks-and-events/webhooks/receiving-webhooks-with-the-github-cli)
-to set up webhook testing. To test `shook` I created an test repository on Github with a script
+to set up webhook testing. To test `shook` I created a test repository on Github with a script
 `update.sh` that appends data to the README.md file, then commits and pushes. Then, running `shook serve --log-level=trace`
 in one terminal, `gh webhook ...` in another and `./update.sh` in a third you can test your deployment.
 
