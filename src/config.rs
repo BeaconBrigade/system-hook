@@ -249,11 +249,7 @@ impl FromStr for TcpOrUnix {
             return Ok(Self::Tcp(s));
         }
 
-        if let Ok(p) = PathBuf::from_str(s) {
-            return Ok(Self::Unix(p));
-        }
-
-        Err(TcpOrUnixParseError)
+        Ok(Self::Unix(PathBuf::from_str(s).unwrap()))
     }
 }
 
