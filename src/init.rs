@@ -195,7 +195,7 @@ fn install(config: &mut InitConfig) -> color_eyre::Result<()> {
 
             tracing::info!("finding alternative name for service file");
             loop {
-                let new_name = get_input("input service name", Some("shook1.service".to_string()))?;
+                let new_name = get_input::<String>("input service name", None)?;
                 if !new_name.ends_with(".service") {
                     tracing::info!("end input with .service");
                 }
