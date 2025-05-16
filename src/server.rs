@@ -164,6 +164,7 @@ fn pre_restart(state: &AppState) -> color_eyre::Result<()> {
         .arg(&state.config.username)
         .arg("-c")
         .arg(&state.config.pre_restart_command)
+        .current_dir(&state.config.repo_path)
         .spawn()?;
 
     let status = handle.wait()?;
