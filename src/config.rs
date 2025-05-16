@@ -28,6 +28,7 @@ pub enum Action {
     Init(Init),
     Serve(Serve),
     Daemon(Daemon),
+    Version(Version),
 }
 
 /// generate a shook config and service
@@ -155,6 +156,11 @@ pub enum DaemonAction {
     Enable(DaemonEnable),
     Stop(DaemonStop),
 }
+
+/// print out shook's version
+#[derive(Debug, Clone, FromArgs)]
+#[argh(subcommand, name = "version")]
+pub struct Version {}
 
 /// start service
 #[derive(Debug, Clone, Copy, FromArgs)]

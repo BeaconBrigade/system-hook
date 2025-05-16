@@ -37,6 +37,10 @@ async fn main() -> color_eyre::Result<()> {
         Action::Init(init) => init::init_project(init),
         Action::Serve(serve) => server::serve(serve).await,
         Action::Daemon(daemon) => daemon::daemon_message(daemon),
+        Action::Version(_) => {
+            println!("shook version: {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
     }?;
 
     Ok(())
