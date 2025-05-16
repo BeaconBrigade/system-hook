@@ -1,6 +1,6 @@
 [package]
 name = "system-hook"
-version = "0.2.0-rc6"
+version = "0.2.0"
 edition = "2021"
 description = "shook: webhook server to automatically update production servers"
 categories = ["webhook", "systemd", "ci"]
