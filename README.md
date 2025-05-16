@@ -50,10 +50,10 @@ and it will generate the `shook.toml` in your repository's directory and `/etc/s
 The `shook.toml` file tells `shook` how to run.
 
 After generating a `shook.toml`, `shook` can be run using `shook serve` which starts the server
-in your terminal, or by running `sudo shook daemon start` which starts the `shook` systemd service.
+in your terminal, or by running `sudo shook daemon . start` which starts the `shook` systemd service.
 For testing out `shook` it is good to play with `shook serve`, you can use command line arguments
 to augment values in the `shook.toml` file. When running in production it would probably be more helpful
-to run `sudo shook daemon enable` so `shook` is started when your computer starts. Note: `shook daemon`
+to run `sudo shook daemon . enable` so `shook` is started when your computer starts. Note: `shook daemon`
 just runs `systemctl` `start`, `stop` and `enable` under the hood, so you can bypass `shook` and run those
 directly if you want.
 
@@ -115,13 +115,15 @@ service. Each config field influences the server, here's an example:
 
 ```toml
 username = "rcullen"
-repo_path = "/home/rcullen/rust/test-webhoks"
+repo_path = "/home/rcullen/rust/test-webhooks"
 remote = "origin"
 branch = "master"
 system_name = "test-restart"
 update_events = ["push"]
 socket_group = "www-data"
 socket_user = "www-data"
+pre_restart_command = ":"
+shook_service_name = "shook.service"
 
 [addr]
 type = "Unix"

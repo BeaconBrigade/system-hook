@@ -9,7 +9,7 @@ pub fn daemon_message(args: Daemon) -> color_eyre::Result<()> {
     tracing::info!("talking to daemon");
     tracing::debug!("{:#?}", args);
 
-    let mut file = File::open(&args.repo_path).context("opening shook config")?;
+    let mut file = File::open(&args.config_path).context("opening shook config")?;
     let mut buf = String::new();
     file.read_to_string(&mut buf)
         .context("reading shook config")?;

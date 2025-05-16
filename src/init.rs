@@ -55,7 +55,7 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
     )?;
     let update_events = get_input_events("github events to update", args.update_events)?;
     let addr = get_input_default(
-        "address to serve on (unix socket path or tcp address)",
+        "address to serve on (unix socket path or tcp address) ensure doesn't overlap with other shook instances",
         args.addr,
         TcpOrUnix::Unix("/var/run/shook.sock".into()),
     )?;

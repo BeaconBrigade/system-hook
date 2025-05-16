@@ -144,7 +144,7 @@ pub struct Daemon {
     pub action: DaemonAction,
     /// location of shook.toml
     #[argh(positional)]
-    pub repo_path: PathBuf,
+    pub config_path: PathBuf,
 }
 
 /// command for the daemon
