@@ -63,6 +63,13 @@ pub struct Init {
     /// is running under. e.g.: if nginx the user should be www-data
     #[argh(option)]
     pub socket_user: Option<String>,
+    /// a command to run before restarting the server service. for example recompiling
+    /// an executable.
+    #[argh(option)]
+    pub pre_restart_command: Option<String>,
+    /// name of the .service file for shook
+    #[argh(option)]
+    pub shook_service_name: Option<String>,
 }
 
 /// init args without all the options
@@ -77,6 +84,8 @@ pub struct InitConfig {
     pub addr: TcpOrUnix,
     pub socket_group: String,
     pub socket_user: String,
+    pub pre_restart_command: String,
+    pub shook_service_name: String,
 }
 
 /// activate the webhook server - each argument overrides the value in
@@ -113,6 +122,10 @@ pub struct Serve {
     /// is running under. e.g.: if nginx the user should be www-data
     #[argh(option)]
     pub socket_user: Option<String>,
+    /// a command to run before restarting the server service. for example recompiling
+    /// an executable.
+    #[argh(option)]
+    pub pre_restart_command: Option<String>,
 }
 
 /// parse a string like: 'commit,push' into events to listen to
@@ -129,6 +142,9 @@ pub struct Daemon {
     /// command for the daemon
     #[argh(subcommand)]
     pub action: DaemonAction,
+    /// location of shook.toml
+    #[argh(positional)]
+    pub repo_path: PathBuf,
 }
 
 /// command for the daemon
@@ -178,6 +194,9 @@ pub struct ServerConfig {
     /// override the owner of the unix socket. should be set to the user your server/proxy
     /// is running under. e.g.: if nginx the user should be www-data
     pub socket_user: String,
+    /// a command to run before restarting the server service. for example recompiling
+    /// an executable.
+    pub pre_restart_command: String,
 }
 
 impl ServerConfig {
@@ -193,6 +212,24 @@ impl ServerConfig {
         }
         if let Some(a) = cli.addr {
             self.addr = a;
+        }
+        if let Some(u) = cli.username {
+            self.username = u;
+        }
+        if let Some(r) = cli.remote {
+            self.remote = r;
+        }
+        if let Some(b) = cli.branch {
+            self.branch = b;
+        }
+        if let Some(g) = cli.socket_group {
+            self.socket_group = g;
+        }
+        if let Some(u) = cli.socket_user {
+            self.socket_user = u;
+        }
+        if let Some(c) = cli.pre_restart_command {
+            self.pre_restart_command = c;
         }
     }
 }

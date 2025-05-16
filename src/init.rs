@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process::Command,
     str::FromStr,
@@ -14,16 +14,31 @@ use text_completions::{EnvCompletion, MultiCompletion, PathCompletion};
 use crate::config::{parse_multiple_events, Init, InitConfig, TcpOrUnix};
 
 const SERVICE_TEMPLATE: &str = include_str!("shook.service");
-const SERVICE_PATH: &str = "/etc/systemd/system/shook.service";
+const SERVICE_DIR: &str = "/etc/systemd/system/";
 
 pub fn init_project(args: Init) -> color_eyre::Result<()> {
     tracing::info!("creating project");
 
     let completion = MultiCompletion::default()
         .with(EnvCompletion::default())
-        .with(PathCompletion::default());
-    let username = get_input("the linux user to run git as", args.username)?;
+        .with(PathCompletion);
     let repo_path = get_input_pathbuf("path to the repository", args.repo_path, &completion)?;
+    let config_path = repo_path.join("shook.toml");
+    if config_path.try_exists()? {
+        tracing::warn!("config already exists");
+        let source = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("source existing shook.toml?")
+            .interact()?;
+        if source {
+            let mut file = File::open(&config_path).context("opening shook config")?;
+            let mut buf = String::new();
+            file.read_to_string(&mut buf)
+                .context("reading shook config")?;
+            let mut config = toml::from_str(&buf).context("parsing shook config")?;
+            return install(&mut config);
+        }
+    }
+    let username = get_input("the linux user to run git as", args.username)?;
     let remote = get_input_default(
         "the remote to track for changes",
         args.remote,
@@ -50,14 +65,24 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
             args.socket_group,
             "www-data".to_string(),
         )?;
-        let user = get_input_default("user to put socket under", args.socket_user, "www-data".to_string())?;
+        let user = get_input_default(
+            "user to put socket under",
+            args.socket_user,
+            "www-data".to_string(),
+        )?;
 
         (group, user)
     } else {
         ("".to_string(), "".to_string())
     };
 
-    let config = InitConfig {
+    let pre_restart_command = get_input_default(
+        "Command to run before restarting",
+        args.pre_restart_command,
+        ":".to_string(),
+    )?;
+
+    let mut config = InitConfig {
         username,
         repo_path,
         remote,
@@ -67,6 +92,10 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         addr,
         socket_group,
         socket_user,
+        pre_restart_command,
+        shook_service_name: args
+            .shook_service_name
+            .unwrap_or_else(|| "shook.service".to_string()),
     };
 
     tracing::debug!(?config);
@@ -112,8 +141,6 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         }
     }
 
-    let toml = toml::to_string_pretty(&config).context("serializing config to toml")?;
-
     let config_path = config.repo_path.join("shook.toml");
     if Path::exists(&config_path) {
         tracing::warn!("{:?} already exists", config_path);
@@ -127,11 +154,17 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
         }
     }
 
+    install(&mut config)?;
+    let toml = toml::to_string_pretty(&config).context("serializing config to toml")?;
     let mut file = File::create(&config_path).context("creating shook.toml")?;
     file.write_all(toml.as_bytes())
         .context("writing shook.toml")?;
     tracing::info!("finished writing shook.toml");
 
+    Ok(())
+}
+
+fn install(config: &mut InitConfig) -> color_eyre::Result<()> {
     let systemd = SERVICE_TEMPLATE.replace(
         "{REPO_PATH}",
         config
@@ -142,21 +175,44 @@ pub fn init_project(args: Init) -> color_eyre::Result<()> {
 
     tracing::info!("installing systemd config");
     tracing::debug!("systemd file:\n{}", systemd);
-    let service_path = PathBuf::from(SERVICE_PATH);
+    let mut service_path = PathBuf::from(SERVICE_DIR);
+    service_path.push(&config.shook_service_name);
     if Path::exists(&service_path) {
         tracing::warn!("shook.service already exists");
 
         let should_replace = Confirm::with_theme(&ColorfulTheme::default())
-            .with_prompt("replace existing shook.service")
+            .with_prompt("replace existing service file?")
             .interact()?;
         if !should_replace {
-            return Err(eyre!("aborting due to existing service"));
+            tracing::info!("not replacing service file");
+            let skip_installing = Confirm::with_theme(&ColorfulTheme::default())
+                .with_prompt("skip installing service file?")
+                .interact()?;
+            if skip_installing {
+                tracing::info!("skipping installing service file");
+                return Ok(());
+            }
+
+            tracing::info!("finding alternative name for service file");
+            loop {
+                let new_name = get_input("input service name", Some("shook1.service".to_string()))?;
+                if !new_name.ends_with(".service") {
+                    tracing::info!("end input with .service");
+                }
+                service_path.pop();
+                service_path.push(new_name.clone());
+                if !Path::exists(&service_path) {
+                    config.shook_service_name = new_name;
+                    break;
+                }
+                tracing::info!("path already exists");
+            }
         }
     }
 
-    let mut file = File::create(&service_path).context("creating shook.service")?;
+    let mut file = File::create(&service_path).context("creating service file")?;
     file.write_all(systemd.as_bytes())
-        .context("writing shook.service")?;
+        .context("writing service file")?;
 
     tracing::info!("finished creating project");
 

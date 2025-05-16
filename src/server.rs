@@ -104,6 +104,11 @@ async fn handler(State(state): State<AppState>, payload: GithubPayload) -> Resul
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    pre_restart(&state).map_err(|e| {
+        tracing::error!("failed to run pre-restart command: {e}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     restart_service(&state).map_err(|e| {
         tracing::error!("failed to restart service: {e}");
         StatusCode::INTERNAL_SERVER_ERROR
@@ -143,6 +148,35 @@ fn pull_updates(state: &AppState) -> color_eyre::Result<()> {
     );
     if status.code().unwrap_or(1) != 0 {
         tracing::error!("git finished with error");
+        return Err(eyre!("git finished with non zero exit code"));
+    }
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+fn pre_restart(state: &AppState) -> color_eyre::Result<()> {
+    tracing::info!(
+        "running pre-restart command: {}",
+        state.config.pre_restart_command,
+    );
+    let mut handle = Command::new("su")
+        .arg(&state.config.username)
+        .arg("-c")
+        .arg(&state.config.pre_restart_command)
+        .spawn()?;
+
+    let status = handle.wait()?;
+    tracing::info!(
+        "{} finished with exit code {:?}",
+        state.config.pre_restart_command,
+        status
+            .code()
+            .map(|s| s.to_string())
+            .unwrap_or("<terminated by signal>".to_string())
+    );
+    if status.code().unwrap_or(1) != 0 {
+        tracing::error!("{} finished with error", state.config.pre_restart_command);
         return Err(eyre!("git finished with non zero exit code"));
     }
 
