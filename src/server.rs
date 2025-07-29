@@ -178,7 +178,7 @@ fn pre_restart(state: &AppState) -> color_eyre::Result<()> {
     );
     if status.code().unwrap_or(1) != 0 {
         tracing::error!("{} finished with error", state.config.pre_restart_command);
-        return Err(eyre!("git finished with non zero exit code"));
+        return Err(eyre!("{} finished with non zero exit code", state.config.pre_restart_command));
     }
 
     Ok(())
