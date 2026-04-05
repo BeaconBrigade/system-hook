@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf, str::FromStr};
+use std::{fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr};
 
 use argh::FromArgs;
 use github_webhook_extract::EventDiscriminants;
@@ -259,11 +259,11 @@ impl FromStr for TcpOrUnix {
     }
 }
 
-impl ToString for TcpOrUnix {
-    fn to_string(&self) -> String {
+impl Display for TcpOrUnix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Tcp(s) => format!("{}", s),
-            Self::Unix(p) => format!("{}", p.to_string_lossy()),
+            Self::Tcp(s) => write!(f, "{}", s),
+            Self::Unix(p) => write!(f, "{}", p.to_string_lossy()),
         }
     }
 }

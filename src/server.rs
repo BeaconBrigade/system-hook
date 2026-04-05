@@ -144,10 +144,12 @@ fn pull_updates(state: &AppState) -> color_eyre::Result<()> {
         status
             .code()
             .map(|s| s.to_string())
-            .unwrap_or("<terminated by signal>".to_string())
+            .unwrap_or_else(|| "<terminated by signal>".to_string())
     );
     if status.code().unwrap_or(1) != 0 {
         tracing::error!("git finished with error");
+        tracing::error!("stdout: {:?}", handle.stdout);
+        tracing::error!("stderr: {:?}", handle.stderr);
         return Err(eyre!("git finished with non zero exit code"));
     }
 
@@ -174,10 +176,12 @@ fn pre_restart(state: &AppState) -> color_eyre::Result<()> {
         status
             .code()
             .map(|s| s.to_string())
-            .unwrap_or("<terminated by signal>".to_string())
+            .unwrap_or_else(|| "<terminated by signal>".to_string())
     );
     if status.code().unwrap_or(1) != 0 {
         tracing::error!("{} finished with error", state.config.pre_restart_command);
+        tracing::error!("stdout: {:?}", handle.stdout);
+        tracing::error!("stderr: {:?}", handle.stderr);
         return Err(eyre!("{} finished with non zero exit code", state.config.pre_restart_command));
     }
 
@@ -202,9 +206,11 @@ fn restart_service(state: &AppState) -> color_eyre::Result<()> {
         status
             .code()
             .map(|s| s.to_string())
-            .unwrap_or("<terminated by signal>".to_string())
+            .unwrap_or_else(|| "<terminated by signal>".to_string())
     );
     if status.code().unwrap_or(1) != 0 {
+        tracing::error!("stdout: {:?}", handle.stdout);
+        tracing::error!("stderr: {:?}", handle.stderr);
         return Err(eyre!("systemctl finished with error"));
     }
 
