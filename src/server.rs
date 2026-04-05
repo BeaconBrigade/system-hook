@@ -1,9 +1,5 @@
 use std::{
-    os::fd::AsRawFd,
-    path::{Path, PathBuf},
-    pin::Pin,
-    process::{Command, Stdio},
-    task::{Context, Poll},
+    io::Read, os::fd::AsRawFd, path::{Path, PathBuf}, pin::Pin, process::{Command, Stdio}, task::{Context, Poll}
 };
 
 use axum::{debug_handler, extract::State, routing::post, Router};
@@ -150,8 +146,16 @@ fn pull_updates(state: &AppState) -> color_eyre::Result<()> {
     );
     if status.code().unwrap_or(1) != 0 {
         tracing::error!("git finished with error");
-        tracing::error!("stdout: {:?}", handle.stdout);
-        tracing::error!("stderr: {:?}", handle.stderr);
+        let mut buf = String::new();
+        if let Some(mut stdout) = handle.stdout {
+            stdout.read_to_string(&mut buf)?;
+        }
+        tracing::error!("stdout: {}", buf);
+        buf.clear();
+        if let Some(mut stderr) = handle.stderr {
+            stderr.read_to_string(&mut buf)?;
+        }
+        tracing::error!("stderr: {}", buf);
         return Err(eyre!("git finished with non zero exit code"));
     }
 
@@ -184,8 +188,16 @@ fn pre_restart(state: &AppState) -> color_eyre::Result<()> {
     );
     if status.code().unwrap_or(1) != 0 {
         tracing::error!("{} finished with error", state.config.pre_restart_command);
-        tracing::error!("stdout: {:?}", handle.stdout);
-        tracing::error!("stderr: {:?}", handle.stderr);
+        let mut buf = String::new();
+        if let Some(mut stdout) = handle.stdout {
+            stdout.read_to_string(&mut buf)?;
+        }
+        tracing::error!("stdout: {}", buf);
+        buf.clear();
+        if let Some(mut stderr) = handle.stderr {
+            stderr.read_to_string(&mut buf)?;
+        }
+        tracing::error!("stderr: {}", buf);
         return Err(eyre!("{} finished with non zero exit code", state.config.pre_restart_command));
     }
 
@@ -215,8 +227,16 @@ fn restart_service(state: &AppState) -> color_eyre::Result<()> {
             .unwrap_or_else(|| "<terminated by signal>".to_string())
     );
     if status.code().unwrap_or(1) != 0 {
-        tracing::error!("stdout: {:?}", handle.stdout);
-        tracing::error!("stderr: {:?}", handle.stderr);
+        let mut buf = String::new();
+        if let Some(mut stdout) = handle.stdout {
+            stdout.read_to_string(&mut buf)?;
+        }
+        tracing::error!("stdout: {}", buf);
+        buf.clear();
+        if let Some(mut stderr) = handle.stderr {
+            stderr.read_to_string(&mut buf)?;
+        }
+        tracing::error!("stderr: {}", buf);
         return Err(eyre!("systemctl finished with error"));
     }
 
