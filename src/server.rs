@@ -2,7 +2,7 @@ use std::{
     os::fd::AsRawFd,
     path::{Path, PathBuf},
     pin::Pin,
-    process::Command,
+    process::{Command, Stdio},
     task::{Context, Poll},
 };
 
@@ -134,6 +134,8 @@ fn pull_updates(state: &AppState) -> color_eyre::Result<()> {
             "git pull '{}' '{}'",
             state.config.remote, state.config.branch
         ))
+        .stdin(Stdio::piped())
+        .stdin(Stdio::piped())
         .current_dir(&state.config.repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
         .spawn()?;
@@ -166,6 +168,8 @@ fn pre_restart(state: &AppState) -> color_eyre::Result<()> {
         .arg(&state.config.username)
         .arg("-c")
         .arg(&state.config.pre_restart_command)
+        .stdin(Stdio::piped())
+        .stdin(Stdio::piped())
         .current_dir(&state.config.repo_path)
         .spawn()?;
 
@@ -195,6 +199,8 @@ fn restart_service(state: &AppState) -> color_eyre::Result<()> {
     let mut handle = Command::new("systemctl")
         .arg("restart")
         .arg(&state.config.system_name)
+        .stdin(Stdio::piped())
+        .stdin(Stdio::piped())
         .spawn()
         .map_err(|e| eyre!("could not spawn systemctl: {e}"))?;
 
